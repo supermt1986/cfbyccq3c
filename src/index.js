@@ -1,7 +1,7 @@
 // 导入订单路由处理函数
 import { getOrders, getOrderDetail, createOrder, updateOrderStatus } from './routes/orders.js';
 // 导入购物车路由处理函数
-import { getCart, addToCart, updateCart, removeFromCart } from './routes/cart.js';
+import { getCart, addToCart, updateCart, removeFromCart, clearCart } from './routes/cart.js';
 
 // 购物车页面模板
 const cartTemplate = `<!DOCTYPE html>
@@ -96,22 +96,22 @@ const cartTemplate = `<!DOCTYPE html>
                 
                 return '<div class="cart-item">' +
                     '<div class="cart-item-image">' +
-                    (item.image ? '<img src="' + item.image + '" alt="' + item.productName + '">' : '<div class="placeholder-image">无图片</div>') +
+                    (item.image ? '<img src="' + item.image + '" alt="' + item.product_name + '">' : '<div class="placeholder-image">无图片</div>') +
                     '</div>' +
                     '<div class="cart-item-info">' +
-                    '<h4>' + item.productName + '</h4>' +
+                    '<h4>' + item.product_name + '</h4>' +
                     '<p>单价: ¥' + item.price + '</p>' +
                     '</div>' +
                     '<div class="cart-item-quantity">' +
-                    '<button class="btn btn-secondary" onclick="updateQuantity(' + item.productId + ', ' + (item.quantity - 1) + ')">-</button>' +
+                    '<button class="btn btn-secondary" onclick="updateQuantity(' + item.product_id + ', ' + (item.quantity - 1) + ')">-</button>' +
                     '<span>' + item.quantity + '</span>' +
-                    '<button class="btn btn-secondary" onclick="updateQuantity(' + item.productId + ', ' + (item.quantity + 1) + ')">+</button>' +
+                    '<button class="btn btn-secondary" onclick="updateQuantity(' + item.product_id + ', ' + (item.quantity + 1) + ')">+</button>' +
                     '</div>' +
                     '<div class="cart-item-total">' +
                     '<p>小计: ¥' + itemTotal.toFixed(2) + '</p>' +
                     '</div>' +
                     '<div class="cart-item-actions">' +
-                    '<button class="btn btn-danger" onclick="removeFromCart(' + item.productId + ')">删除</button>' +
+                    '<button class="btn btn-danger" onclick="removeFromCart(' + item.product_id + ')">删除</button>' +
                     '</div>' +
                     '</div>';
             }).join('');
@@ -213,7 +213,7 @@ const cartTemplate = `<!DOCTYPE html>
                         body: JSON.stringify({
                             userId: userId,
                             items: result.data.map(item => ({
-                                productId: item.productId,
+                                productId: item.product_id,
                                 quantity: item.quantity
                             })),
                             shippingAddress: '示例地址',
@@ -225,9 +225,25 @@ const cartTemplate = `<!DOCTYPE html>
                     
                     if (orderResult.success) {
                         alert('订单创建成功！订单号: ' + orderResult.orderId);
-                        // 清空购物车（在实际应用中可能需要调用清空购物车的API）
-                        document.getElementById('cart-items').innerHTML = '<div class="no-products">购物车为空</div>';
-                        document.getElementById('cart-total').textContent = '¥0.00';
+                        // 清空购物车
+                        const clearResponse = await fetch('/api/cart/clear', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                userId: userId
+                            })
+                        });
+                        
+                        const clearResult = await clearResponse.json();
+                        
+                        if (clearResult.success) {
+                            // 重新加载购物车
+                            loadCart();
+                        } else {
+                            alert('清空购物车失败: ' + (clearResult.error || '未知错误'));
+                        }
                     } else {
                         alert('创建订单失败: ' + (orderResult.error || '未知错误'));
                     }
@@ -313,6 +329,10 @@ export default {
     
     if (url.pathname === '/api/cart/remove' && request.method === 'POST') {
       return removeFromCart(request, env);
+    }
+    
+    if (url.pathname === '/api/cart/clear' && request.method === 'POST') {
+      return clearCart(request, env);
     }
     
     // Serve cart page
