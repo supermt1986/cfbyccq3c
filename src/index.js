@@ -12,6 +12,11 @@ export default {
       return handleLogin(request, env);
     }
     
+    // Handle logout
+    if (url.pathname === '/api/logout' && request.method === 'POST') {
+      return handleLogout(request, env);
+    }
+    
     // Handle products API
     if (url.pathname === '/api/products' && request.method === 'GET') {
       return handleGetProducts(request, env);
@@ -33,7 +38,19 @@ export default {
     
     // Serve dashboard for authenticated users
     if (url.pathname === '/admin') {
-      // In a real app, you would check authentication here
+      // Check if user is authenticated (for demo purposes, we'll use a simple cookie check)
+      const cookieHeader = request.headers.get('Cookie') || '';
+      const isAuthenticated = cookieHeader.includes('auth_token=');
+      
+      if (!isAuthenticated) {
+        // Redirect to login page if not authenticated
+        return new Response(htmlTemplate, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+          },
+        });
+      }
+      
       return new Response(dashboardTemplate, {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
@@ -149,11 +166,17 @@ async function handleLogin(request, env) {
     }
     
     // In a real app, you would generate a JWT token here
-    return new Response(JSON.stringify({ 
+    // For demo purposes, we'll set a simple auth cookie
+    const responseBody = JSON.stringify({ 
       success: true, 
       user: { id: user.id, username: user.username } 
-    }), {
-      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    return new Response(responseBody, {
+      headers: { 
+        'Content-Type': 'application/json',
+        'Set-Cookie': `auth_token=${user.id}; Path=/; HttpOnly; SameSite=Strict`
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -669,10 +692,28 @@ header {
 .header-content {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 1rem;
+    padding: 0 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        padding: 0 1rem;
+    }
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 1rem;
+    }
 }
 
 .header-content h1 {
@@ -710,9 +751,36 @@ header {
 
 .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 2rem;
     padding: 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+@media (min-width: 1200px) {
+    .product-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+    .product-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    .product-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
 }
 
 .product-card {
@@ -1068,6 +1136,16 @@ async function handleUpdateProduct(request, env, productId) {
   }
 }
 
+// Handle logout
+async function handleLogout(request, env) {
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { 
+      'Content-Type': 'application/json',
+      'Set-Cookie': 'auth_token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'
+    }
+  });
+}
+
 // Handle delete product
 async function handleDeleteProduct(request, env, productId) {
   try {
@@ -1138,7 +1216,7 @@ const dashboardTemplate = `<!DOCTYPE html>
                 <h1>仪表板</h1>
                 <div class="user-info">
                     <span>欢迎, <span id="username">用户</span></span>
-                    <a href="/" class="logout-btn">退出登录</a>
+                    <a href="#" class="logout-btn" onclick="logout()">退出登录</a>
                 </div>
             </header>
             <div class="content-area">
@@ -1418,6 +1496,26 @@ const dashboardTemplate = `<!DOCTYPE html>
                 alert('操作过程中发生错误');
             }
         });
+        
+        // 登出功能
+        function logout() {
+            fetch('/api/logout', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 登出成功，重定向到首页
+                    window.location.href = '/';
+                } else {
+                    alert('登出失败');
+                }
+            })
+            .catch(error => {
+                console.error('Logout error:', error);
+                alert('登出过程中发生错误');
+            });
+        }
     </script>
 </body>
 </html>`;
