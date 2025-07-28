@@ -32,7 +32,7 @@ export default {
     }
     
     // Serve dashboard for authenticated users
-    if (url.pathname === '/dashboard') {
+    if (url.pathname === '/admin') {
       // In a real app, you would check authentication here
       return new Response(dashboardTemplate, {
         headers: {
@@ -41,9 +41,9 @@ export default {
       });
     }
     
-    // Serve static files for the frontend
+    // Serve product listing page as homepage
     if (url.pathname === '/') {
-      return new Response(htmlTemplate, {
+      return new Response(productListingTemplate, {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
         },
@@ -650,6 +650,186 @@ header {
     .stats-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* Product listing styles */
+.product-listing-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f5f7fa;
+}
+
+.product-header {
+    background: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 1rem 0;
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-content h1 {
+    color: #2c3e50;
+    margin: 0;
+}
+
+.main-nav a {
+    text-decoration: none;
+    color: #3498db;
+    margin-left: 1rem;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.main-nav a:hover {
+    color: #2980b9;
+}
+
+.product-main {
+    flex: 1;
+    padding: 2rem 0;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.section-header h2 {
+    color: #2c3e50;
+    font-size: 2rem;
+    margin: 0;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    padding: 1rem;
+}
+
+.product-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.product-image {
+    height: 200px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.placeholder-image {
+    color: #7f8c8d;
+    font-size: 1rem;
+}
+
+.product-info {
+    padding: 1.5rem;
+}
+
+.product-name {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 1.25rem;
+}
+
+.product-description {
+    color: #7f8c8d;
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.product-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.product-price {
+    font-weight: bold;
+    color: #e74c3c;
+    font-size: 1.25rem;
+}
+
+.product-stock {
+    color: #27ae60;
+    font-size: 0.9rem;
+}
+
+.product-category {
+    background: #3498db;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.loading, .error, .no-products {
+    text-align: center;
+    padding: 2rem;
+    color: #7f8c8d;
+    font-size: 1.1rem;
+}
+
+.error {
+    color: #e74c3c;
+}
+
+.no-products {
+    color: #95a5a6;
+}
+
+.product-footer {
+    background: #2c3e50;
+    color: white;
+    text-align: center;
+    padding: 1rem 0;
+    margin-top: auto;
 }`;
 
 // JavaScript template
@@ -1238,6 +1418,111 @@ const dashboardTemplate = `<!DOCTYPE html>
                 alert('操作过程中发生错误');
             }
         });
+    </script>
+</body>
+</html>`;
+
+// Product listing template
+const productListingTemplate = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商城系统 - 商品浏览</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="product-listing-container">
+        <header class="product-header">
+            <div class="header-content">
+                <h1>商城系统</h1>
+                <nav class="main-nav">
+                    <a href="/">首页</a>
+                    <a href="/admin">管理后台</a>
+                </nav>
+            </div>
+        </header>
+        
+        <main class="product-main">
+            <div class="container">
+                <div class="section-header">
+                    <h2>商品列表</h2>
+                </div>
+                
+                <div class="product-grid" id="product-grid">
+                    <!-- 商品将通过JavaScript动态加载 -->
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="product-footer">
+            <div class="container">
+                <p>&copy; 2023 商城系统. 保留所有权利.</p>
+            </div>
+        </footer>
+    </div>
+    
+    <script>
+        // 页面加载完成后获取商品列表
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProducts();
+        });
+        
+        // 获取商品列表
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products');
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderProducts(result.data);
+                } else {
+                    document.getElementById('product-grid').innerHTML = 
+                        '<div class="error">加载失败: ' + (result.error || '未知错误') + '</div>';
+                }
+            } catch (error) {
+                console.error('Load products error:', error);
+                document.getElementById('product-grid').innerHTML = 
+                    '<div class="error">加载过程中发生错误</div>';
+            }
+        }
+        
+        // 渲染商品列表
+        function renderProducts(products) {
+            const grid = document.getElementById('product-grid');
+            
+            if (products.length === 0) {
+                grid.innerHTML = '<div class="no-products">暂无商品</div>';
+                return;
+            }
+            
+            grid.innerHTML = products.map(product => 
+                '<div class="product-card">' +
+                '<div class="product-image">' +
+                (product.image_url ? 
+                    '<img src="' + product.image_url + '" alt="' + product.name + '">' : 
+                    '<div class="placeholder-image">无图片</div>') +
+                '</div>' +
+                '<div class="product-info">' +
+                '<h3 class="product-name">' + product.name + '</h3>' +
+                '<p class="product-description">' + (product.description || '暂无描述') + '</p>' +
+                '<div class="product-meta">' +
+                '<span class="product-price">¥' + product.price + '</span>' +
+                '<span class="product-stock">库存: ' + product.stock_quantity + '</span>' +
+                (product.category ? '<span class="product-category">' + product.category + '</span>' : '') +
+                '</div>' +
+                '<button class="btn btn-primary" onclick="viewProduct(' + product.id + ')">查看详情</button>' +
+                '</div>' +
+                '</div>'
+            ).join('');
+        }
+        
+        // 查看商品详情（示例功能）
+        function viewProduct(productId) {
+            alert('查看商品ID: ' + productId + ' 的详情');
+            // 在实际应用中，这里会跳转到商品详情页
+        }
     </script>
 </body>
 </html>`;
