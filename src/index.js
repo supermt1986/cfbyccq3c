@@ -1,3 +1,248 @@
+// 导入订单路由处理函数
+import { getOrders, getOrderDetail, createOrder, updateOrderStatus } from './routes/orders.js';
+// 导入购物车路由处理函数
+import { getCart, addToCart, updateCart, removeFromCart } from './routes/cart.js';
+
+// 购物车页面模板
+const cartTemplate = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商城系统 - 购物车</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="product-listing-container">
+        <header class="product-header">
+            <div class="header-content">
+                <h1>商城系统</h1>
+                <nav class="main-nav">
+                    <a href="/">首页</a>
+                    <a href="/admin">管理后台</a>
+                </nav>
+            </div>
+        </header>
+        
+        <main class="product-main">
+            <div class="container">
+                <div class="section-header">
+                    <h2>购物车</h2>
+                </div>
+                
+                <div class="cart-container">
+                    <div class="cart-items" id="cart-items">
+                        <div class="loading">加载中...</div>
+                    </div>
+                    <div class="cart-summary">
+                        <div class="cart-total">
+                            <h3>总计: <span id="cart-total">¥0.00</span></h3>
+                        </div>
+                        <button class="btn btn-primary" onclick="checkout()">结算</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="product-footer">
+            <div class="container">
+                <p>&copy; 2023 商城系统. 保留所有权利.</p>
+            </div>
+        </footer>
+    </div>
+    
+    <script>
+        // 页面加载完成后获取购物车内容
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCart();
+        });
+        
+        // 获取购物车内容
+        async function loadCart() {
+            try {
+                // 在实际应用中，这里应该从认证信息中获取用户ID
+                // 为了演示，我们使用一个示例用户ID
+                const userId = 1;
+                const response = await fetch('/api/cart?userId=' + userId);
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderCart(result.data);
+                } else {
+                    document.getElementById('cart-items').innerHTML = 
+                        '<div class="error">加载失败: ' + (result.error || '未知错误') + '</div>';
+                }
+            } catch (error) {
+                console.error('Load cart error:', error);
+                document.getElementById('cart-items').innerHTML = 
+                    '<div class="error">加载过程中发生错误</div>';
+            }
+        }
+        
+        // 渲染购物车内容
+        function renderCart(cartItems) {
+            const container = document.getElementById('cart-items');
+            
+            if (cartItems.length === 0) {
+                container.innerHTML = '<div class="no-products">购物车为空</div>';
+                document.getElementById('cart-total').textContent = '¥0.00';
+                return;
+            }
+            
+            let total = 0;
+            const itemsHtml = cartItems.map(item => {
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+                
+                return '<div class="cart-item">' +
+                    '<div class="cart-item-image">' +
+                    (item.image ? '<img src="' + item.image + '" alt="' + item.productName + '">' : '<div class="placeholder-image">无图片</div>') +
+                    '</div>' +
+                    '<div class="cart-item-info">' +
+                    '<h4>' + item.productName + '</h4>' +
+                    '<p>单价: ¥' + item.price + '</p>' +
+                    '</div>' +
+                    '<div class="cart-item-quantity">' +
+                    '<button class="btn btn-secondary" onclick="updateQuantity(' + item.productId + ', ' + (item.quantity - 1) + ')">-</button>' +
+                    '<span>' + item.quantity + '</span>' +
+                    '<button class="btn btn-secondary" onclick="updateQuantity(' + item.productId + ', ' + (item.quantity + 1) + ')">+</button>' +
+                    '</div>' +
+                    '<div class="cart-item-total">' +
+                    '<p>小计: ¥' + itemTotal.toFixed(2) + '</p>' +
+                    '</div>' +
+                    '<div class="cart-item-actions">' +
+                    '<button class="btn btn-danger" onclick="removeFromCart(' + item.productId + ')">删除</button>' +
+                    '</div>' +
+                    '</div>';
+            }).join('');
+            
+            container.innerHTML = itemsHtml;
+            document.getElementById('cart-total').textContent = '¥' + total.toFixed(2);
+        }
+        
+        // 更新商品数量
+        async function updateQuantity(productId, quantity) {
+            if (quantity <= 0) {
+                removeFromCart(productId);
+                return;
+            }
+            
+            try {
+                // 在实际应用中，这里应该从认证信息中获取用户ID
+                // 为了演示，我们使用一个示例用户ID
+                const userId = 1;
+                
+                const response = await fetch('/api/cart/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        productId: productId,
+                        quantity: quantity
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadCart(); // 重新加载购物车
+                } else {
+                    alert('更新数量失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Update quantity error:', error);
+                alert('更新数量过程中发生错误');
+            }
+        }
+        
+        // 从购物车中移除商品
+        async function removeFromCart(productId) {
+            if (!confirm('确定要从购物车中移除这个商品吗？')) {
+                return;
+            }
+            
+            try {
+                // 在实际应用中，这里应该从认证信息中获取用户ID
+                // 为了演示，我们使用一个示例用户ID
+                const userId = 1;
+                
+                const response = await fetch('/api/cart/remove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        productId: productId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadCart(); // 重新加载购物车
+                } else {
+                    alert('移除商品失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Remove from cart error:', error);
+                alert('移除商品过程中发生错误');
+            }
+        }
+        
+        // 结算
+        async function checkout() {
+            try {
+                // 在实际应用中，这里应该从认证信息中获取用户ID
+                // 为了演示，我们使用一个示例用户ID
+                const userId = 1;
+                
+                // 获取购物车内容
+                const response = await fetch('/api/cart?userId=' + userId);
+                const result = await response.json();
+                
+                if (result.success && result.data.length > 0) {
+                    // 创建订单
+                    const orderResponse = await fetch('/api/orders', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            userId: userId,
+                            items: result.data.map(item => ({
+                                productId: item.productId,
+                                quantity: item.quantity
+                            })),
+                            shippingAddress: '示例地址',
+                            paymentMethod: '在线支付'
+                        })
+                    });
+                    
+                    const orderResult = await orderResponse.json();
+                    
+                    if (orderResult.success) {
+                        alert('订单创建成功！订单号: ' + orderResult.orderId);
+                        // 清空购物车（在实际应用中可能需要调用清空购物车的API）
+                        document.getElementById('cart-items').innerHTML = '<div class="no-products">购物车为空</div>';
+                        document.getElementById('cart-total').textContent = '¥0.00';
+                    } else {
+                        alert('创建订单失败: ' + (orderResult.error || '未知错误'));
+                    }
+                } else {
+                    alert('购物车为空，无法结算');
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                alert('结算过程中发生错误');
+            }
+        }
+    </script>
+</body>
+</html>`;
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -34,6 +279,49 @@ export default {
     if (url.pathname.startsWith('/api/products/') && request.method === 'DELETE') {
       const productId = url.pathname.split('/')[3];
       return handleDeleteProduct(request, env, productId);
+    }
+    
+    // Handle orders API
+    if (url.pathname === '/api/orders' && request.method === 'GET') {
+      return getOrders(request, env);
+    }
+    
+    if (url.pathname === '/api/order-detail' && request.method === 'GET') {
+      return getOrderDetail(request, env);
+    }
+    
+    if (url.pathname === '/api/orders' && request.method === 'POST') {
+      return createOrder(request, env);
+    }
+    
+    if (url.pathname === '/api/update-order-status' && request.method === 'POST') {
+      return updateOrderStatus(request, env);
+    }
+    
+    // Handle cart API
+    if (url.pathname === '/api/cart' && request.method === 'GET') {
+      return getCart(request, env);
+    }
+    
+    if (url.pathname === '/api/cart/add' && request.method === 'POST') {
+      return addToCart(request, env);
+    }
+    
+    if (url.pathname === '/api/cart/update' && request.method === 'POST') {
+      return updateCart(request, env);
+    }
+    
+    if (url.pathname === '/api/cart/remove' && request.method === 'POST') {
+      return removeFromCart(request, env);
+    }
+    
+    // Serve cart page
+    if (url.pathname === '/cart') {
+      return new Response(cartTemplate, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+        },
+      });
     }
     
     // Serve dashboard for authenticated users
@@ -898,6 +1186,126 @@ header {
     text-align: center;
     padding: 1rem 0;
     margin-top: auto;
+}
+
+/* Cart styles */
+.cart-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.cart-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.cart-item:last-child {
+    border-bottom: none;
+}
+
+.cart-item-image {
+    width: 100px;
+    height: 100px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-right: 1rem;
+}
+
+.cart-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cart-item-info {
+    flex: 1;
+    margin-right: 1rem;
+}
+
+.cart-item-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.cart-item-info p {
+    margin: 0;
+    color: #7f8c8d;
+}
+
+.cart-item-quantity {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 1rem;
+}
+
+.cart-item-quantity span {
+    min-width: 2rem;
+    text-align: center;
+}
+
+.cart-item-total {
+    min-width: 100px;
+    margin-right: 1rem;
+}
+
+.cart-item-total p {
+    margin: 0;
+    font-weight: bold;
+    color: #e74c3c;
+}
+
+.cart-item-actions {
+    min-width: 80px;
+}
+
+.cart-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-top: 2px solid #eee;
+}
+
+.cart-total h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+@media (max-width: 768px) {
+    .cart-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .cart-item-image {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .cart-item-info, .cart-item-quantity, .cart-item-total, .cart-item-actions {
+        margin: 0.5rem 0;
+        width: 100%;
+    }
+    
+    .cart-summary {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .cart-total {
+        text-align: center;
+    }
 }`;
 
 // JavaScript template
@@ -1305,7 +1713,35 @@ const dashboardTemplate = `<!DOCTYPE html>
                 </div>
                 <div id="orders" class="content">
                     <h2>订单管理</h2>
-                    <p>这里是订单管理页面的内容。在实际应用中，这里会显示订单列表、订单详情、发货状态等功能。</p>
+                    <div class="order-actions">
+                        <button class="btn btn-primary" onclick="loadOrders()">刷新订单</button>
+                    </div>
+                    <div class="order-list">
+                        <table class="product-table">
+                            <thead>
+                                <tr>
+                                    <th>订单ID</th>
+                                    <th>用户ID</th>
+                                    <th>总金额</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="order-table-body">
+                                <tr>
+                                    <td colspan="6" class="text-center">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="order-detail-container" class="product-form-container" style="display: none; margin-top: 20px;">
+                        <h3>订单详情</h3>
+                        <div id="order-detail-content"></div>
+                        <div class="form-actions">
+                            <button class="btn btn-secondary" onclick="hideOrderDetail()">关闭</button>
+                        </div>
+                    </div>
                 </div>
                 <div id="customers" class="content">
                     <h2>客户管理</h2>
@@ -1357,6 +1793,11 @@ const dashboardTemplate = `<!DOCTYPE html>
             // 如果是商品管理页面，加载商品数据
             if (contentId === 'products') {
                 loadProducts();
+            }
+            
+            // 如果是订单管理页面，加载订单数据
+            if (contentId === 'orders') {
+                loadOrders();
             }
         }
         
@@ -1516,6 +1957,145 @@ const dashboardTemplate = `<!DOCTYPE html>
                 alert('登出过程中发生错误');
             });
         }
+        
+        // 订单管理功能
+        async function loadOrders() {
+            try {
+                // 在实际应用中，这里应该从认证信息中获取用户ID
+                // 为了演示，我们使用一个示例用户ID
+                const userId = 1;
+                const response = await fetch('/api/orders?userId=' + userId);
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderOrders(result.data);
+                } else {
+                    document.getElementById('order-table-body').innerHTML = 
+                        '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
+                }
+            } catch (error) {
+                console.error('Load orders error:', error);
+                document.getElementById('order-table-body').innerHTML = 
+                    '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
+            }
+        }
+        
+        function renderOrders(orders) {
+            const tbody = document.getElementById('order-table-body');
+            
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">暂无订单数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = orders.map(order => 
+                '<tr>' +
+                '<td>' + order.id + '</td>' +
+                '<td>' + order.user_id + '</td>' +
+                '<td>¥' + order.total_amount + '</td>' +
+                '<td>' + order.status + '</td>' +
+                '<td>' + new Date(order.created_at).toLocaleDateString() + '</td>' +
+                '<td>' +
+                '<button class="btn btn-primary" onclick="viewOrderDetail(' + order.id + ')">详情</button> ' +
+                '<button class="btn btn-secondary" onclick="updateOrderStatus(' + order.id + ', \'shipped\')">发货</button>' +
+                '</td>' +
+                '</tr>'
+            ).join('');
+        }
+        
+        async function viewOrderDetail(orderId) {
+            try {
+                const response = await fetch('/api/order-detail?orderId=' + orderId);
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderOrderDetail(result.data);
+                    document.getElementById('order-detail-container').style.display = 'block';
+                } else {
+                    alert('获取订单详情失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Get order detail error:', error);
+                alert('获取订单详情过程中发生错误');
+            }
+        }
+        
+        function renderOrderDetail(orderData) {
+            const order = orderData.order;
+            const items = orderData.items;
+            
+            let itemsHtml = items.map(item => 
+                '<tr>' +
+                '<td>' + item.product_name + '</td>' +
+                '<td>' + item.quantity + '</td>' +
+                '<td>¥' + item.price + '</td>' +
+                '<td>¥' + (item.price * item.quantity).toFixed(2) + '</td>' +
+                '</tr>'
+            ).join('');
+            
+            const detailHtml = '<div class="order-detail-info">' +
+                '<h4>订单信息</h4>' +
+                '<p><strong>订单号:</strong> ' + order.id + '</p>' +
+                '<p><strong>总金额:</strong> ¥' + order.total_amount + '</p>' +
+                '<p><strong>状态:</strong> ' + order.status + '</p>' +
+                '<p><strong>创建时间:</strong> ' + new Date(order.created_at).toLocaleString() + '</p>' +
+                '<p><strong>收货地址:</strong> ' + (order.shipping_address || '未提供') + '</p>' +
+                '<p><strong>支付方式:</strong> ' + (order.payment_method || '未提供') + '</p>' +
+                '</div>' +
+                '<div class="order-detail-items">' +
+                '<h4>订单项</h4>' +
+                '<table class="product-table">' +
+                '<thead>' +
+                '<tr>' +
+                '<th>商品名称</th>' +
+                '<th>数量</th>' +
+                '<th>单价</th>' +
+                '<th>小计</th>' +
+                '</tr>' +
+                '</thead>' +
+                '<tbody>' +
+                itemsHtml +
+                '</tbody>' +
+                '</table>' +
+                '</div>';
+            
+            document.getElementById('order-detail-content').innerHTML = detailHtml;
+        }
+        
+        function hideOrderDetail() {
+            document.getElementById('order-detail-container').style.display = 'none';
+        }
+        
+        async function updateOrderStatus(orderId, status) {
+            if (!confirm('确定要更新订单状态吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/update-order-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        status: status
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('订单状态更新成功');
+                    loadOrders(); // 重新加载订单列表
+                } else {
+                    alert('更新失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Update order status error:', error);
+                alert('更新订单状态过程中发生错误');
+            }
+        }
     </script>
 </body>
 </html>`;
@@ -1537,6 +2117,7 @@ const productListingTemplate = `<!DOCTYPE html>
                 <nav class="main-nav">
                     <a href="/">首页</a>
                     <a href="/admin">管理后台</a>
+                    <a href="/cart">购物车</a>
                 </nav>
             </div>
         </header>
@@ -1596,7 +2177,7 @@ const productListingTemplate = `<!DOCTYPE html>
             }
             
             grid.innerHTML = products.map(product => 
-                '<div class="product-card">' +
+                '<div class="product-card" data-product-id="' + product.id + '">' +
                 '<div class="product-image">' +
                 (product.image_url ? 
                     '<img src="' + product.image_url + '" alt="' + product.name + '">' : 
@@ -1610,7 +2191,8 @@ const productListingTemplate = `<!DOCTYPE html>
                 '<span class="product-stock">库存: ' + product.stock_quantity + '</span>' +
                 (product.category ? '<span class="product-category">' + product.category + '</span>' : '') +
                 '</div>' +
-                '<button class="btn btn-primary" onclick="viewProduct(' + product.id + ')">查看详情</button>' +
+                '<button class="btn btn-primary" onclick="viewProduct(' + product.id + ')">查看详情</button> ' +
+                '<button class="btn btn-secondary" onclick="addToCart(' + product.id + ')">添加到购物车</button>' +
                 '</div>' +
                 '</div>'
             ).join('');
@@ -1620,6 +2202,38 @@ const productListingTemplate = `<!DOCTYPE html>
         function viewProduct(productId) {
             alert('查看商品ID: ' + productId + ' 的详情');
             // 在实际应用中，这里会跳转到商品详情页
+        }
+        
+        // 添加商品到购物车
+        async function addToCart(productId) {
+            try {
+                // 在实际应用中，这里应该从认证信息中获取用户ID
+                // 为了演示，我们使用一个示例用户ID
+                const userId = 1;
+                
+                const response = await fetch('/api/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        productId: productId,
+                        quantity: 1
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('商品已添加到购物车');
+                } else {
+                    alert('添加到购物车失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Add to cart error:', error);
+                alert('添加到购物车过程中发生错误');
+            }
         }
     </script>
 </body>
