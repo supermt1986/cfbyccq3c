@@ -940,8 +940,8 @@ document.getElementById('login-form').addEventListener('submit', async function(
         const result = await response.json();
         
         if (response.ok && result.success) {
-            // 登录成功后重定向到仪表板
-            window.location.href = '/dashboard';
+            // 登录成功后重定向到管理后台
+            window.location.href = '/admin';
         } else {
             alert('登录失败: ' + (result.error || '未知错误'));
         }
