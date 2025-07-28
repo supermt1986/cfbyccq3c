@@ -12,6 +12,25 @@ export default {
       return handleLogin(request, env);
     }
     
+    // Handle products API
+    if (url.pathname === '/api/products' && request.method === 'GET') {
+      return handleGetProducts(request, env);
+    }
+    
+    if (url.pathname === '/api/products' && request.method === 'POST') {
+      return handleCreateProduct(request, env);
+    }
+    
+    if (url.pathname.startsWith('/api/products/') && request.method === 'PUT') {
+      const productId = url.pathname.split('/')[3];
+      return handleUpdateProduct(request, env, productId);
+    }
+    
+    if (url.pathname.startsWith('/api/products/') && request.method === 'DELETE') {
+      const productId = url.pathname.split('/')[3];
+      return handleDeleteProduct(request, env, productId);
+    }
+    
     // Serve dashboard for authenticated users
     if (url.pathname === '/dashboard') {
       // In a real app, you would check authentication here
@@ -500,6 +519,118 @@ header {
     justify-content: center;
 }
 
+/* Product management styles */
+.product-actions {
+    margin-bottom: 20px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+.product-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.product-table th,
+.product-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.product-table th {
+    background: #3498db;
+    color: white;
+    font-weight: bold;
+}
+
+.product-table tr:hover {
+    background: #f5f7fa;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.product-form-container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-top: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group textarea {
+    height: 100px;
+    resize: vertical;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .dashboard-container {
@@ -617,6 +748,183 @@ document.addEventListener('DOMContentLoaded', function() {
     showForm('login');
 });`;
 
+// Handle get products
+async function handleGetProducts(request, env) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = parseInt(searchParams.get('limit')) || 10;
+    const offset = (page - 1) * limit;
+    
+    // Get products with pagination
+    const { results } = await env.D1_DB.prepare(
+      'SELECT * FROM products ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    )
+      .bind(limit, offset)
+      .all();
+    
+    // Get total count
+    const { results: countResults } = await env.D1_DB.prepare(
+      'SELECT COUNT(*) as total FROM products'
+    )
+      .all();
+    
+    const total = countResults[0].total;
+    const totalPages = Math.ceil(total / limit);
+    
+    return new Response(JSON.stringify({
+      success: true,
+      data: results,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages
+      }
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Get products error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// Handle create product
+async function handleCreateProduct(request, env) {
+  try {
+    const { name, description, price, category, stock_quantity, image_url } = await request.json();
+    
+    // Validate input
+    if (!name || price === undefined) {
+      return new Response(JSON.stringify({ error: 'Name and price are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Insert new product
+    const result = await env.D1_DB.prepare(
+      'INSERT INTO products (name, description, price, category, stock_quantity, image_url) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+      .bind(
+        name, 
+        description || null, 
+        price, 
+        category || null, 
+        stock_quantity !== undefined ? stock_quantity : 0, 
+        image_url || null
+      )
+      .run();
+    
+    if (result.success) {
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } else {
+      console.error('Failed to create product:', result);
+      return new Response(JSON.stringify({ error: 'Failed to create product' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  } catch (error) {
+    console.error('Create product error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error: ' + error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// Handle update product
+async function handleUpdateProduct(request, env, productId) {
+  try {
+    const { name, description, price, category, stock_quantity, image_url } = await request.json();
+    
+    // Validate input
+    if (!productId) {
+      return new Response(JSON.stringify({ error: 'Product ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Update product
+    const result = await env.D1_DB.prepare(
+      'UPDATE products SET name = ?, description = ?, price = ?, category = ?, stock_quantity = ?, image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    )
+      .bind(
+        name || null, 
+        description || null, 
+        price !== undefined ? price : null, 
+        category || null, 
+        stock_quantity !== undefined ? stock_quantity : null, 
+        image_url || null, 
+        productId
+      )
+      .run();
+    
+    if (result.success) {
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } else {
+      console.error('Failed to update product:', result);
+      return new Response(JSON.stringify({ error: 'Failed to update product' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  } catch (error) {
+    console.error('Update product error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error: ' + error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// Handle delete product
+async function handleDeleteProduct(request, env, productId) {
+  try {
+    // Validate input
+    if (!productId) {
+      return new Response(JSON.stringify({ error: 'Product ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Delete product
+    const { success } = await env.D1_DB.prepare(
+      'DELETE FROM products WHERE id = ?'
+    )
+      .bind(productId)
+      .run();
+    
+    if (success) {
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } else {
+      return new Response(JSON.stringify({ error: 'Failed to delete product' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  } catch (error) {
+    console.error('Delete product error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
 // Dashboard template
 const dashboardTemplate = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -680,7 +988,62 @@ const dashboardTemplate = `<!DOCTYPE html>
                 </div>
                 <div id="products" class="content">
                     <h2>商品管理</h2>
-                    <p>这里是商品管理页面的内容。在实际应用中，这里会显示商品列表、添加/编辑商品等功能。</p>
+                    <div class="product-actions">
+                        <button class="btn btn-primary" onclick="showProductForm()">添加商品</button>
+                    </div>
+                    <div class="product-list">
+                        <table class="product-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>商品名称</th>
+                                    <th>价格</th>
+                                    <th>库存</th>
+                                    <th>分类</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="product-table-body">
+                                <tr>
+                                    <td colspan="6" class="text-center">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="product-form-container" class="product-form-container" style="display: none;">
+                        <h3 id="form-title">添加商品</h3>
+                        <form id="product-form">
+                            <input type="hidden" id="product-id">
+                            <div class="form-group">
+                                <label for="product-name">商品名称</label>
+                                <input type="text" id="product-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-price">价格</label>
+                                <input type="number" id="product-price" step="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-stock">库存</label>
+                                <input type="number" id="product-stock" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="product-category">分类</label>
+                                <input type="text" id="product-category">
+                            </div>
+                            <div class="form-group">
+                                <label for="product-description">描述</label>
+                                <textarea id="product-description"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-image">图片URL</label>
+                                <input type="text" id="product-image">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">保存</button>
+                                <button type="button" class="btn btn-secondary" onclick="hideProductForm()">取消</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
                 <div id="orders" class="content">
                     <h2>订单管理</h2>
@@ -732,11 +1095,148 @@ const dashboardTemplate = `<!DOCTYPE html>
             if (menuItem) {
                 menuItem.parentElement.classList.add('active');
             }
+            
+            // 如果是商品管理页面，加载商品数据
+            if (contentId === 'products') {
+                loadProducts();
+            }
         }
         
         // 页面加载完成后显示概览
         document.addEventListener('DOMContentLoaded', function() {
             showContent('overview');
+        });
+        
+        // 商品管理功能
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products');
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderProducts(result.data);
+                } else {
+                    document.getElementById('product-table-body').innerHTML = 
+                        '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
+                }
+            } catch (error) {
+                console.error('Load products error:', error);
+                document.getElementById('product-table-body').innerHTML = 
+                    '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
+            }
+        }
+        
+        function renderProducts(products) {
+            const tbody = document.getElementById('product-table-body');
+            
+            if (products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">暂无商品数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = products.map(product => 
+                '<tr>' +
+                '<td>' + product.id + '</td>' +
+                '<td>' + product.name + '</td>' +
+                '<td>¥' + product.price + '</td>' +
+                '<td>' + product.stock_quantity + '</td>' +
+                '<td>' + (product.category || '-') + '</td>' +
+                '<td>' +
+                '<button class="btn btn-primary" onclick="editProduct(' + product.id + ')">编辑</button> ' +
+                '<button class="btn btn-danger" onclick="deleteProduct(' + product.id + ')">删除</button>' +
+                '</td>' +
+                '</tr>'
+            ).join('');
+        }
+        
+        function showProductForm() {
+            document.getElementById('form-title').textContent = '添加商品';
+            document.getElementById('product-form').reset();
+            document.getElementById('product-id').value = '';
+            document.getElementById('product-form-container').style.display = 'block';
+        }
+        
+        function hideProductForm() {
+            document.getElementById('product-form-container').style.display = 'none';
+        }
+        
+        function editProduct(productId) {
+            // 在实际应用中，这里会从服务器获取商品详情
+            // 这里我们只是演示编辑功能
+            document.getElementById('form-title').textContent = '编辑商品';
+            document.getElementById('product-id').value = productId;
+            // 这里应该填充表单数据，但在演示中我们跳过这一步
+            document.getElementById('product-form-container').style.display = 'block';
+        }
+        
+        async function deleteProduct(productId) {
+            if (!confirm('确定要删除这个商品吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/products/' + productId, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('商品删除成功');
+                    loadProducts(); // 重新加载商品列表
+                } else {
+                    alert('删除失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Delete product error:', error);
+                alert('删除过程中发生错误');
+            }
+        }
+        
+        // 处理商品表单提交
+        document.getElementById('product-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const productId = document.getElementById('product-id').value;
+            const name = document.getElementById('product-name').value;
+            const price = document.getElementById('product-price').value;
+            const stock = document.getElementById('product-stock').value;
+            const category = document.getElementById('product-category').value;
+            const description = document.getElementById('product-description').value;
+            const image = document.getElementById('product-image').value;
+            
+            try {
+                const method = productId ? 'PUT' : 'POST';
+                const url = productId ? '/api/products/' + productId : '/api/products';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name,
+                        price: parseFloat(price),
+                        stock_quantity: parseInt(stock),
+                        category,
+                        description,
+                        image_url: image
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(productId ? '商品更新成功' : '商品添加成功');
+                    hideProductForm();
+                    loadProducts(); // 重新加载商品列表
+                } else {
+                    alert('操作失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Product form error:', error);
+                alert('操作过程中发生错误');
+            }
         });
     </script>
 </body>
