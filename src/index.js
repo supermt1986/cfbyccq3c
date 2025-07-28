@@ -359,9 +359,9 @@ export default {
     if (url.pathname === '/admin') {
       // Check if user is authenticated (for demo purposes, we'll use a simple cookie check)
       const cookieHeader = request.headers.get('Cookie') || '';
-      const isAuthenticated = cookieHeader.includes('auth_token=');
+      const authMatch = cookieHeader.match(/auth_token=(\d+)/);
       
-      if (!isAuthenticated) {
+      if (!authMatch) {
         // Redirect to login page if not authenticated
         return new Response(htmlTemplate, {
           headers: {
@@ -370,11 +370,46 @@ export default {
         });
       }
       
-      return new Response(dashboardTemplate, {
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-        },
-      });
+      // Get user ID from cookie
+      const userId = authMatch[1];
+      
+      // Verify user exists in database
+      try {
+        const user = await env.D1_DB.prepare(
+          'SELECT id, username FROM users WHERE id = ?'
+        )
+        .bind(userId)
+        .first();
+        
+        if (!user) {
+          // Invalid user, redirect to login
+          return new Response(htmlTemplate, {
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Set-Cookie': 'auth_token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'
+            },
+          });
+        }
+        
+        // Inject user data into dashboard template
+        const dashboardWithUser = dashboardTemplate.replace(
+          '<span id="username">用户</span>',
+          `<span id="username">${user.username}</span>`
+        );
+        
+        return new Response(dashboardWithUser, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+          },
+        });
+      } catch (error) {
+        console.error('Authentication error:', error);
+        return new Response(htmlTemplate, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+          },
+        });
+      }
     }
     
     // Serve product listing page as homepage
