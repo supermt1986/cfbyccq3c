@@ -1879,85 +1879,48 @@ const dashboardTemplate = `<!DOCTYPE html>
         }
         
         // 登出功能
-        async function logout() {
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST',
-                    credentials: 'same-origin'
-                });
-                const data = await response.json();
+        function logout() {
+            fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
                     // 登出成功，重定向到首页
                     window.location.href = '/';
                 } else {
                     alert('登出失败');
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Logout error:', error);
                 alert('登出过程中发生错误');
-            }
+            });
         }
         
         // 页面加载完成后显示概览
         document.addEventListener('DOMContentLoaded', function() {
             showContent('overview');
-            
-            // 为菜单项添加事件监听器
-            const menuLinks = document.querySelectorAll('.menu a');
-            menuLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const onclickAttr = this.getAttribute('onclick');
-                    if (onclickAttr) {
-                        // 使用eval执行onclick属性中的函数调用
-                        eval(onclickAttr);
-                    }
-                });
-            });
-            
-            // 为登出按钮添加事件监听器
-            const logoutBtn = document.querySelector('.logout-btn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    logout();
-                });
-            }
         });
         
-        // 将函数绑定到window对象以确保全局可访问
-        window.showContent = showContent;
-        window.logout = logout;
-        window.loadProducts = loadProducts;
-        window.renderProducts = renderProducts;
-        window.showProductForm = showProductForm;
-        window.hideProductForm = hideProductForm;
-        window.editProduct = editProduct;
-        window.deleteProduct = deleteProduct;
-        window.loadOrders = loadOrders;
-        window.renderOrders = renderOrders;
-        window.viewOrderDetail = viewOrderDetail;
-        window.renderOrderDetail = renderOrderDetail;
-        window.hideOrderDetail = hideOrderDetail;
-        window.updateOrderStatus = updateOrderStatus;
-        
         // 商品管理功能
-        async function loadProducts() {
-            try {
-                const response = await fetch('/api/products');
-                const result = await response.json();
-                
+        function loadProducts() {
+            fetch('/api/products')
+            .then(response => response.json())
+            .then(result => {
                 if (result.success) {
                     renderProducts(result.data);
                 } else {
                     document.getElementById('product-table-body').innerHTML = 
                         '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Load products error:', error);
                 document.getElementById('product-table-body').innerHTML = 
                     '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
-            }
+            });
         }
         
         function renderProducts(products) {
@@ -2015,32 +1978,31 @@ const dashboardTemplate = `<!DOCTYPE html>
             if (formContainer) formContainer.style.display = 'block';
         }
         
-        async function deleteProduct(productId) {
+        function deleteProduct(productId) {
             if (!confirm('确定要删除这个商品吗？')) {
                 return;
             }
             
-            try {
-                const response = await fetch('/api/products/' + productId, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
+            fetch('/api/products/' + productId, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(result => {
                 if (result.success) {
                     alert('商品删除成功');
                     loadProducts(); // 重新加载商品列表
                 } else {
                     alert('删除失败: ' + (result.error || '未知错误'));
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Delete product error:', error);
                 alert('删除过程中发生错误');
-            }
+            });
         }
         
         // 处理商品表单提交
-        document.getElementById('product-form').addEventListener('submit', async function(e) {
+        document.getElementById('product-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const productId = document.getElementById('product-id').value;
@@ -2051,27 +2013,25 @@ const dashboardTemplate = `<!DOCTYPE html>
             const description = document.getElementById('product-description').value;
             const image = document.getElementById('product-image').value;
             
-            try {
-                const method = productId ? 'PUT' : 'POST';
-                const url = productId ? '/api/products/' + productId : '/api/products';
-                
-                const response = await fetch(url, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name,
-                        price: parseFloat(price),
-                        stock_quantity: parseInt(stock),
-                        category,
-                        description,
-                        image_url: image
-                    })
-                });
-                
-                const result = await response.json();
-                
+            const method = productId ? 'PUT' : 'POST';
+            const url = productId ? '/api/products/' + productId : '/api/products';
+            
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name,
+                    price: parseFloat(price),
+                    stock_quantity: parseInt(stock),
+                    category,
+                    description,
+                    image_url: image
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
                 if (result.success) {
                     alert(productId ? '商品更新成功' : '商品添加成功');
                     hideProductForm();
@@ -2079,52 +2039,33 @@ const dashboardTemplate = `<!DOCTYPE html>
                 } else {
                     alert('操作失败: ' + (result.error || '未知错误'));
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Product form error:', error);
                 alert('操作过程中发生错误');
-            }
+            });
         });
         
-        // 登出功能
-        async function logout() {
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST',
-                    credentials: 'same-origin'
-                });
-                const data = await response.json();
-                if (data.success) {
-                    // 登出成功，重定向到首页
-                    window.location.href = '/';
-                } else {
-                    alert('登出失败');
-                }
-            } catch (error) {
-                console.error('Logout error:', error);
-                alert('登出过程中发生错误');
-            }
-        }
-        
         // 订单管理功能
-        async function loadOrders() {
-            try {
-                // 在实际应用中，这里应该从认证信息中获取用户ID
-                // 为了演示，我们使用一个示例用户ID
-                const userId = 1;
-                const response = await fetch('/api/orders?userId=' + userId);
-                const result = await response.json();
-                
+        function loadOrders() {
+            // 在实际应用中，这里应该从认证信息中获取用户ID
+            // 为了演示，我们使用一个示例用户ID
+            const userId = 1;
+            fetch('/api/orders?userId=' + userId)
+            .then(response => response.json())
+            .then(result => {
                 if (result.success) {
                     renderOrders(result.data);
                 } else {
                     document.getElementById('order-table-body').innerHTML = 
                         '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Load orders error:', error);
                 document.getElementById('order-table-body').innerHTML = 
                     '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
-            }
+            });
         }
         
         function renderOrders(orders) {
@@ -2150,11 +2091,10 @@ const dashboardTemplate = `<!DOCTYPE html>
             ).join('');
         }
         
-        async function viewOrderDetail(orderId) {
-            try {
-                const response = await fetch('/api/order-detail?orderId=' + orderId);
-                const result = await response.json();
-                
+        function viewOrderDetail(orderId) {
+            fetch('/api/order-detail?orderId=' + orderId)
+            .then(response => response.json())
+            .then(result => {
                 if (result.success) {
                     renderOrderDetail(result.data);
                     const detailContainer = document.getElementById('order-detail-container');
@@ -2164,10 +2104,11 @@ const dashboardTemplate = `<!DOCTYPE html>
                 } else {
                     alert('获取订单详情失败: ' + (result.error || '未知错误'));
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Get order detail error:', error);
                 alert('获取订单详情过程中发生错误');
-            }
+            });
         }
         
         function renderOrderDetail(orderData) {
@@ -2219,36 +2160,51 @@ const dashboardTemplate = `<!DOCTYPE html>
             }
         }
         
-        async function updateOrderStatus(orderId, status) {
+        function updateOrderStatus(orderId, status) {
             if (!confirm('确定要更新订单状态吗？')) {
                 return;
             }
             
-            try {
-                const response = await fetch('/api/update-order-status', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        orderId: orderId,
-                        status: status
-                    })
-                });
-                
-                const result = await response.json();
-                
+            fetch('/api/update-order-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    orderId: orderId,
+                    status: status
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
                 if (result.success) {
                     alert('订单状态更新成功');
                     loadOrders(); // 重新加载订单列表
                 } else {
                     alert('更新失败: ' + (result.error || '未知错误'));
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Update order status error:', error);
                 alert('更新订单状态过程中发生错误');
-            }
+            });
         }
+        
+        // 将函数绑定到window对象以确保全局可访问
+        window.showContent = showContent;
+        window.logout = logout;
+        window.loadProducts = loadProducts;
+        window.renderProducts = renderProducts;
+        window.showProductForm = showProductForm;
+        window.hideProductForm = hideProductForm;
+        window.editProduct = editProduct;
+        window.deleteProduct = deleteProduct;
+        window.loadOrders = loadOrders;
+        window.renderOrders = renderOrders;
+        window.viewOrderDetail = viewOrderDetail;
+        window.renderOrderDetail = renderOrderDetail;
+        window.hideOrderDetail = hideOrderDetail;
+        window.updateOrderStatus = updateOrderStatus;
     </script>
 </body>
 </html>`;
