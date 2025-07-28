@@ -1,0 +1,11 @@
+name = "cf-shop"
+main = "src/index.js"
+compatibility_date = "2023-12-01"
+
+[dev]
+port = 8788
+
+[[ d1_databases ]]
+binding = "D1_DB"
+database_name = "shop_db"
+database_id = "your_database_id"

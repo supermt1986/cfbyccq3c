@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商城系统 - 登录/注册</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <div class="form-header">
+                <h2>欢迎来到商城系统</h2>
+                <div class="tab">
+                    <button class="tab-button active" onclick="showForm('login')">登录</button>
+                    <button class="tab-button" onclick="showForm('register')">注册</button>
+                </div>
+            </div>
+            
+            <!-- 登录表单 -->
+            <form id="login-form" class="form active">
+                <div class="input-group">
+                    <label for="login-email">邮箱</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="input-group">
+                    <label for="login-password">密码</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="submit-btn">登录</button>
+                <div class="form-footer">
+                    <a href="#" onclick="showForm('register')">还没有账户？立即注册</a>
+                </div>
+            </form>
+            
+            <!-- 注册表单 -->
+            <form id="register-form" class="form">
+                <div class="input-group">
+                    <label for="register-username">用户名</label>
+                    <input type="text" id="register-username" required>
+                </div>
+                <div class="input-group">
+                    <label for="register-email">邮箱</label>
+                    <input type="email" id="register-email" required>
+                </div>
+                <div class="input-group">
+                    <label for="register-password">密码</label>
+                    <input type="password" id="register-password" required>
+                </div>
+                <div class="input-group">
+                    <label for="register-confirm-password">确认密码</label>
+                    <input type="password" id="register-confirm-password" required>
+                </div>
+                <button type="submit" class="submit-btn">注册</button>
+                <div class="form-footer">
+                    <a href="#" onclick="showForm('login')">已有账户？立即登录</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
