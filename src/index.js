@@ -1843,7 +1843,10 @@ const dashboardTemplate = `<!DOCTYPE html>
             });
             
             // 显示选中的内容
-            document.getElementById(contentId).classList.add('active');
+            const contentElement = document.getElementById(contentId);
+            if (contentElement) {
+                contentElement.classList.add('active');
+            }
             
             // 更新菜单状态
             document.querySelectorAll('.menu li').forEach(li => {
@@ -1851,11 +1854,15 @@ const dashboardTemplate = `<!DOCTYPE html>
             });
             
             // 找到对应的菜单项并激活
-            const menuItem = Array.from(document.querySelectorAll('.menu a')).find(a => 
-                a.getAttribute('onclick').includes(contentId)
-            );
-            if (menuItem) {
-                menuItem.parentElement.classList.add('active');
+            const menuLinks = document.querySelectorAll('.menu a');
+            for (let i = 0; i < menuLinks.length; i++) {
+                const link = menuLinks[i];
+                if (link.getAttribute('onclick') && link.getAttribute('onclick').includes(contentId)) {
+                    if (link.parentElement) {
+                        link.parentElement.classList.add('active');
+                    }
+                    break;
+                }
             }
             
             // 如果是商品管理页面，加载商品数据
@@ -1917,23 +1924,35 @@ const dashboardTemplate = `<!DOCTYPE html>
         }
         
         function showProductForm() {
-            document.getElementById('form-title').textContent = '添加商品';
-            document.getElementById('product-form').reset();
-            document.getElementById('product-id').value = '';
-            document.getElementById('product-form-container').style.display = 'block';
+            const formTitle = document.getElementById('form-title');
+            const productForm = document.getElementById('product-form');
+            const productId = document.getElementById('product-id');
+            const formContainer = document.getElementById('product-form-container');
+            
+            if (formTitle) formTitle.textContent = '添加商品';
+            if (productForm) productForm.reset();
+            if (productId) productId.value = '';
+            if (formContainer) formContainer.style.display = 'block';
         }
         
         function hideProductForm() {
-            document.getElementById('product-form-container').style.display = 'none';
+            const formContainer = document.getElementById('product-form-container');
+            if (formContainer) {
+                formContainer.style.display = 'none';
+            }
         }
         
         function editProduct(productId) {
             // 在实际应用中，这里会从服务器获取商品详情
             // 这里我们只是演示编辑功能
-            document.getElementById('form-title').textContent = '编辑商品';
-            document.getElementById('product-id').value = productId;
+            const formTitle = document.getElementById('form-title');
+            const productIdInput = document.getElementById('product-id');
+            const formContainer = document.getElementById('product-form-container');
+            
+            if (formTitle) formTitle.textContent = '编辑商品';
+            if (productIdInput) productIdInput.value = productId;
             // 这里应该填充表单数据，但在演示中我们跳过这一步
-            document.getElementById('product-form-container').style.display = 'block';
+            if (formContainer) formContainer.style.display = 'block';
         }
         
         async function deleteProduct(productId) {
@@ -2007,23 +2026,23 @@ const dashboardTemplate = `<!DOCTYPE html>
         });
         
         // 登出功能
-        function logout() {
-            fetch('/api/logout', {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
                 if (data.success) {
                     // 登出成功，重定向到首页
                     window.location.href = '/';
                 } else {
                     alert('登出失败');
                 }
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('Logout error:', error);
                 alert('登出过程中发生错误');
-            });
+            }
         }
         
         // 订单管理功能
@@ -2078,7 +2097,10 @@ const dashboardTemplate = `<!DOCTYPE html>
                 
                 if (result.success) {
                     renderOrderDetail(result.data);
-                    document.getElementById('order-detail-container').style.display = 'block';
+                    const detailContainer = document.getElementById('order-detail-container');
+                    if (detailContainer) {
+                        detailContainer.style.display = 'block';
+                    }
                 } else {
                     alert('获取订单详情失败: ' + (result.error || '未知错误'));
                 }
@@ -2131,7 +2153,10 @@ const dashboardTemplate = `<!DOCTYPE html>
         }
         
         function hideOrderDetail() {
-            document.getElementById('order-detail-container').style.display = 'none';
+            const detailContainer = document.getElementById('order-detail-container');
+            if (detailContainer) {
+                detailContainer.style.display = 'none';
+            }
         }
         
         async function updateOrderStatus(orderId, status) {
