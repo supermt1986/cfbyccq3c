@@ -1878,10 +1878,46 @@ const dashboardTemplate = `<!DOCTYPE html>
             }
         }
         
+        // 登出功能
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // 登出成功，重定向到首页
+                    window.location.href = '/';
+                } else {
+                    alert('登出失败');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                alert('登出过程中发生错误');
+            }
+        }
+        
         // 页面加载完成后显示概览
         document.addEventListener('DOMContentLoaded', function() {
             showContent('overview');
         });
+        
+        // 将函数绑定到window对象以确保全局可访问
+        window.showContent = showContent;
+        window.logout = logout;
+        window.loadProducts = loadProducts;
+        window.renderProducts = renderProducts;
+        window.showProductForm = showProductForm;
+        window.hideProductForm = hideProductForm;
+        window.editProduct = editProduct;
+        window.deleteProduct = deleteProduct;
+        window.loadOrders = loadOrders;
+        window.renderOrders = renderOrders;
+        window.viewOrderDetail = viewOrderDetail;
+        window.renderOrderDetail = renderOrderDetail;
+        window.hideOrderDetail = hideOrderDetail;
+        window.updateOrderStatus = updateOrderStatus;
         
         // 商品管理功能
         async function loadProducts() {
