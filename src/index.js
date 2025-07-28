@@ -12,6 +12,16 @@ export default {
       return handleLogin(request, env);
     }
     
+    // Serve dashboard for authenticated users
+    if (url.pathname === '/dashboard') {
+      // In a real app, you would check authentication here
+      return new Response(dashboardTemplate, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+        },
+      });
+    }
+    
     // Serve static files for the frontend
     if (url.pathname === '/') {
       return new Response(htmlTemplate, {
@@ -347,14 +357,167 @@ body {
     }
 }
 
+/* Dashboard styles */
+.dashboard-container {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    background: #f5f7fa;
+}
+
+.sidebar {
+    width: 250px;
+    background: #2c3e50;
+    color: white;
+    height: 100vh;
+    position: fixed;
+}
+
+.logo {
+    padding: 20px;
+    background: #1a2530;
+    text-align: center;
+}
+
+.logo h2 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.menu ul {
+    list-style: none;
+    padding: 0;
+}
+
+.menu li {
+    border-bottom: 1px solid #34495e;
+}
+
+.menu li.active {
+    background: #34495e;
+}
+
+.menu a {
+    display: block;
+    padding: 15px 20px;
+    color: #ecf0f1;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.menu a:hover {
+    background: #34495e;
+    padding-left: 25px;
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 250px;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background: white;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logout-btn {
+    background: #e74c3c;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background 0.3s;
+}
+
+.logout-btn:hover {
+    background: #c0392b;
+}
+
+.content-area {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.content {
+    display: none;
+}
+
+.content.active {
+    display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-card h3 {
+    color: #7f8c8d;
+    margin-bottom: 10px;
+}
+
+.stat-card p {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.chart-placeholder {
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+    margin-top: 20px;
+    color: #7f8c8d;
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* 响应式设计 */
-@media (max-width: 480px) {
-    .container {
-        padding: 10px;
+@media (max-width: 768px) {
+    .dashboard-container {
+        flex-direction: column;
     }
     
-    .form-header, .form {
-        padding: 20px;
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
     }
 }`;
 
@@ -398,9 +561,8 @@ document.getElementById('login-form').addEventListener('submit', async function(
         const result = await response.json();
         
         if (response.ok && result.success) {
-            alert('登录成功！');
-            // 在实际应用中，这里应该重定向到用户仪表板
-            console.log('Logged in user:', result.user);
+            // 登录成功后重定向到仪表板
+            window.location.href = '/dashboard';
         } else {
             alert('登录失败: ' + (result.error || '未知错误'));
         }
@@ -454,3 +616,128 @@ document.getElementById('register-form').addEventListener('submit', async functi
 document.addEventListener('DOMContentLoaded', function() {
     showForm('login');
 });`;
+
+// Dashboard template
+const dashboardTemplate = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商城系统 - 仪表板</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="logo">
+                <h2>商城管理系统</h2>
+            </div>
+            <nav class="menu">
+                <ul>
+                    <li class="active"><a href="#" onclick="showContent('overview')">概览</a></li>
+                    <li><a href="#" onclick="showContent('products')">商品管理</a></li>
+                    <li><a href="#" onclick="showContent('orders')">订单管理</a></li>
+                    <li><a href="#" onclick="showContent('customers')">客户管理</a></li>
+                    <li><a href="#" onclick="showContent('categories')">分类管理</a></li>
+                    <li><a href="#" onclick="showContent('promotions')">促销活动</a></li>
+                    <li><a href="#" onclick="showContent('reports')">数据报告</a></li>
+                    <li><a href="#" onclick="showContent('settings')">系统设置</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="main-content">
+            <header>
+                <h1>仪表板</h1>
+                <div class="user-info">
+                    <span>欢迎, <span id="username">用户</span></span>
+                    <a href="/" class="logout-btn">退出登录</a>
+                </div>
+            </header>
+            <div class="content-area">
+                <div id="overview" class="content active">
+                    <h2>概览</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>总销售额</h3>
+                            <p>¥128,000</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>订单数量</h3>
+                            <p>1,248</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>客户数量</h3>
+                            <p>3,456</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>商品数量</h3>
+                            <p>892</p>
+                        </div>
+                    </div>
+                    <div class="chart-placeholder">
+                        <p>销售趋势图表</p>
+                    </div>
+                </div>
+                <div id="products" class="content">
+                    <h2>商品管理</h2>
+                    <p>这里是商品管理页面的内容。在实际应用中，这里会显示商品列表、添加/编辑商品等功能。</p>
+                </div>
+                <div id="orders" class="content">
+                    <h2>订单管理</h2>
+                    <p>这里是订单管理页面的内容。在实际应用中，这里会显示订单列表、订单详情、发货状态等功能。</p>
+                </div>
+                <div id="customers" class="content">
+                    <h2>客户管理</h2>
+                    <p>这里是客户管理页面的内容。在实际应用中，这里会显示客户列表、客户详情、客户分组等功能。</p>
+                </div>
+                <div id="categories" class="content">
+                    <h2>分类管理</h2>
+                    <p>这里是分类管理页面的内容。在实际应用中，这里会显示商品分类、添加/编辑分类等功能。</p>
+                </div>
+                <div id="promotions" class="content">
+                    <h2>促销活动</h2>
+                    <p>这里是促销活动页面的内容。在实际应用中，这里会显示优惠券、折扣活动、满减活动等功能。</p>
+                </div>
+                <div id="reports" class="content">
+                    <h2>数据报告</h2>
+                    <p>这里是数据报告页面的内容。在实际应用中，这里会显示销售报告、客户分析、商品分析等功能。</p>
+                </div>
+                <div id="settings" class="content">
+                    <h2>系统设置</h2>
+                    <p>这里是系统设置页面的内容。在实际应用中，这里会显示店铺信息、支付设置、配送设置等功能。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 显示选中的内容
+        function showContent(contentId) {
+            // 隐藏所有内容
+            document.querySelectorAll('.content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 显示选中的内容
+            document.getElementById(contentId).classList.add('active');
+            
+            // 更新菜单状态
+            document.querySelectorAll('.menu li').forEach(li => {
+                li.classList.remove('active');
+            });
+            
+            // 找到对应的菜单项并激活
+            const menuItem = Array.from(document.querySelectorAll('.menu a')).find(a => 
+                a.getAttribute('onclick').includes(contentId)
+            );
+            if (menuItem) {
+                menuItem.parentElement.classList.add('active');
+            }
+        }
+        
+        // 页面加载完成后显示概览
+        document.addEventListener('DOMContentLoaded', function() {
+            showContent('overview');
+        });
+    </script>
+</body>
+</html>`;
