@@ -337,11 +337,22 @@ export default {
     
     // Serve cart page
     if (url.pathname === '/cart') {
-      return new Response(cartTemplate, {
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-        },
-      });
+      // Try to serve the static cart.html file first
+      try {
+        const cartHtml = await env.ASSETS.fetch(new Request('http://localhost/cart.html')).then(res => res.text());
+        return new Response(cartHtml, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+          },
+        });
+      } catch (error) {
+        // Fallback to the inline template if the file is not found
+        return new Response(cartTemplate, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+          },
+        });
+      }
     }
     
     // Serve dashboard for authenticated users
@@ -1215,6 +1226,8 @@ header {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     padding: 2rem;
     margin-bottom: 2rem;
+    max-width: 1200px;
+    margin: 0 auto 2rem auto;
 }
 
 .cart-item {

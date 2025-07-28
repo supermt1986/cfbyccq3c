@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商城系统 - 购物车</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="product-listing-container">
+        <header class="product-header">
+            <div class="header-content">
+                <h1>商城系统</h1>
+                <nav class="main-nav">
+                    <a href="/">首页</a>
+                    <a href="/admin">管理后台</a>
+                    <a href="/cart" class="active">购物车</a>
+                </nav>
+            </div>
+        </header>
+        
+        <main class="product-main">
+            <div class="container">
+                <div class="section-header">
+                    <h2>购物车</h2>
+                </div>
+                
+                <div class="cart-container">
+                    <div class="cart-items" id="cart-items">
+                        <div class="loading">加载中...</div>
+                    </div>
+                    <div class="cart-summary">
+                        <div class="cart-total">
+                            <h3>总计: <span id="cart-total">¥0.00</span></h3>
+                        </div>
+                        <button class="btn btn-primary" onclick="checkout()">结算</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="product-footer">
+            <div class="container">
+                <p>&copy; 2023 商城系统. 保留所有权利.</p>
+            </div>
+        </footer>
+    </div>
+    
+    <script src="/cart.js"></script>
+</body>
+</html>
