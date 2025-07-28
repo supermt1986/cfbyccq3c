@@ -1676,14 +1676,14 @@ const dashboardTemplate = `<!DOCTYPE html>
             </div>
             <nav class="menu">
                 <ul>
-                    <li class="active"><a href="#" onclick="showContent('overview')">概览</a></li>
-                    <li><a href="#" onclick="showContent('products')">商品管理</a></li>
-                    <li><a href="#" onclick="showContent('orders')">订单管理</a></li>
-                    <li><a href="#" onclick="showContent('customers')">客户管理</a></li>
-                    <li><a href="#" onclick="showContent('categories')">分类管理</a></li>
-                    <li><a href="#" onclick="showContent('promotions')">促销活动</a></li>
-                    <li><a href="#" onclick="showContent('reports')">数据报告</a></li>
-                    <li><a href="#" onclick="showContent('settings')">系统设置</a></li>
+                    <li data-content="overview" class="active"><a href="#">概览</a></li>
+                    <li data-content="products"><a href="#">商品管理</a></li>
+                    <li data-content="orders"><a href="#">订单管理</a></li>
+                    <li data-content="customers"><a href="#">客户管理</a></li>
+                    <li data-content="categories"><a href="#">分类管理</a></li>
+                    <li data-content="promotions"><a href="#">促销活动</a></li>
+                    <li data-content="reports"><a href="#">数据报告</a></li>
+                    <li data-content="settings"><a href="#">系统设置</a></li>
                 </ul>
             </nav>
         </div>
@@ -1692,7 +1692,7 @@ const dashboardTemplate = `<!DOCTYPE html>
                 <h1>仪表板</h1>
                 <div class="user-info">
                     <span>欢迎, <span id="username">用户</span></span>
-                    <a href="#" class="logout-btn" onclick="logout()">退出登录</a>
+                    <a href="#" class="logout-btn">退出登录</a>
                 </div>
             </header>
             <div class="content-area">
@@ -1723,7 +1723,7 @@ const dashboardTemplate = `<!DOCTYPE html>
                 <div id="products" class="content">
                     <h2>商品管理</h2>
                     <div class="product-actions">
-                        <button class="btn btn-primary" onclick="showProductForm()">添加商品</button>
+                        <button class="btn btn-primary" id="add-product-btn">添加商品</button>
                     </div>
                     <div class="product-list">
                         <table class="product-table">
@@ -1774,7 +1774,7 @@ const dashboardTemplate = `<!DOCTYPE html>
                             </div>
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">保存</button>
-                                <button type="button" class="btn btn-secondary" onclick="hideProductForm()">取消</button>
+                                <button type="button" class="btn btn-secondary" id="cancel-product-btn">取消</button>
                             </div>
                         </form>
                     </div>
@@ -1782,7 +1782,7 @@ const dashboardTemplate = `<!DOCTYPE html>
                 <div id="orders" class="content">
                     <h2>订单管理</h2>
                     <div class="order-actions">
-                        <button class="btn btn-primary" onclick="loadOrders()">刷新订单</button>
+                        <button class="btn btn-primary" id="refresh-orders-btn">刷新订单</button>
                     </div>
                     <div class="order-list">
                         <table class="product-table">
@@ -1807,7 +1807,7 @@ const dashboardTemplate = `<!DOCTYPE html>
                         <h3>订单详情</h3>
                         <div id="order-detail-content"></div>
                         <div class="form-actions">
-                            <button class="btn btn-secondary" onclick="hideOrderDetail()">关闭</button>
+                            <button class="btn btn-secondary" id="close-order-detail-btn">关闭</button>
                         </div>
                     </div>
                 </div>
@@ -1859,10 +1859,8 @@ const dashboardTemplate = `<!DOCTYPE html>
             const menuLinks = document.querySelectorAll('.menu a');
             for (let i = 0; i < menuLinks.length; i++) {
                 const link = menuLinks[i];
-                if (link.getAttribute('onclick') && link.getAttribute('onclick').includes(contentId)) {
-                    if (link.parentElement) {
-                        link.parentElement.classList.add('active');
-                    }
+                if (link.parentElement && link.parentElement.getAttribute('data-content') === contentId) {
+                    link.parentElement.classList.add('active');
                     break;
                 }
             }
@@ -1899,27 +1897,27 @@ const dashboardTemplate = `<!DOCTYPE html>
             });
         }
         
-        // 页面加载完成后显示概览
-        document.addEventListener('DOMContentLoaded', function() {
-            showContent('overview');
-        });
-        
         // 商品管理功能
         function loadProducts() {
             fetch('/api/products')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(result => {
                 if (result.success) {
                     renderProducts(result.data);
                 } else {
                     document.getElementById('product-table-body').innerHTML = 
-                        '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
+                        '<tr><td colspan="6" class="text-center">加载失败: ' + (result.error || '未知错误') + '</td></tr>';
                 }
             })
             .catch(error => {
                 console.error('Load products error:', error);
                 document.getElementById('product-table-body').innerHTML = 
-                    '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
+                    '<tr><td colspan="6" class="text-center">加载失败: ' + error.message + '</td></tr>';
             });
         }
         
@@ -1939,11 +1937,24 @@ const dashboardTemplate = `<!DOCTYPE html>
                 '<td>' + product.stock_quantity + '</td>' +
                 '<td>' + (product.category || '-') + '</td>' +
                 '<td>' +
-                '<button class="btn btn-primary" onclick="editProduct(' + product.id + ')">编辑</button> ' +
-                '<button class="btn btn-danger" onclick="deleteProduct(' + product.id + ')">删除</button>' +
+                '<button class="btn btn-primary edit-product-btn" data-id="' + product.id + '">编辑</button> ' +
+                '<button class="btn btn-danger delete-product-btn" data-id="' + product.id + '">删除</button>' +
                 '</td>' +
                 '</tr>'
             ).join('');
+            
+            // 为编辑和删除按钮添加事件监听器
+            document.querySelectorAll('.edit-product-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    editProduct(this.getAttribute('data-id'));
+                });
+            });
+            
+            document.querySelectorAll('.delete-product-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    deleteProduct(this.getAttribute('data-id'));
+                });
+            });
         }
         
         function showProductForm() {
@@ -2001,70 +2012,30 @@ const dashboardTemplate = `<!DOCTYPE html>
             });
         }
         
-        // 处理商品表单提交
-        document.getElementById('product-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const productId = document.getElementById('product-id').value;
-            const name = document.getElementById('product-name').value;
-            const price = document.getElementById('product-price').value;
-            const stock = document.getElementById('product-stock').value;
-            const category = document.getElementById('product-category').value;
-            const description = document.getElementById('product-description').value;
-            const image = document.getElementById('product-image').value;
-            
-            const method = productId ? 'PUT' : 'POST';
-            const url = productId ? '/api/products/' + productId : '/api/products';
-            
-            fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name,
-                    price: parseFloat(price),
-                    stock_quantity: parseInt(stock),
-                    category,
-                    description,
-                    image_url: image
-                })
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    alert(productId ? '商品更新成功' : '商品添加成功');
-                    hideProductForm();
-                    loadProducts(); // 重新加载商品列表
-                } else {
-                    alert('操作失败: ' + (result.error || '未知错误'));
-                }
-            })
-            .catch(error => {
-                console.error('Product form error:', error);
-                alert('操作过程中发生错误');
-            });
-        });
-        
         // 订单管理功能
         function loadOrders() {
             // 在实际应用中，这里应该从认证信息中获取用户ID
             // 为了演示，我们使用一个示例用户ID
             const userId = 1;
             fetch('/api/orders?userId=' + userId)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(result => {
                 if (result.success) {
                     renderOrders(result.data);
                 } else {
                     document.getElementById('order-table-body').innerHTML = 
-                        '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
+                        '<tr><td colspan="6" class="text-center">加载失败: ' + (result.error || '未知错误') + '</td></tr>';
                 }
             })
             .catch(error => {
                 console.error('Load orders error:', error);
                 document.getElementById('order-table-body').innerHTML = 
-                    '<tr><td colspan="6" class="text-center">加载失败</td></tr>';
+                    '<tr><td colspan="6" class="text-center">加载失败: ' + error.message + '</td></tr>';
             });
         }
         
@@ -2084,11 +2055,24 @@ const dashboardTemplate = `<!DOCTYPE html>
                 '<td>' + order.status + '</td>' +
                 '<td>' + new Date(order.created_at).toLocaleDateString() + '</td>' +
                 '<td>' +
-                '<button class="btn btn-primary" onclick="viewOrderDetail(' + order.id + ')">详情</button> ' +
-                '<button class="btn btn-secondary" onclick="updateOrderStatus(' + order.id + ', \'shipped\')">发货</button>' +
+                '<button class="btn btn-primary view-order-detail-btn" data-id="' + order.id + '">详情</button> ' +
+                '<button class="btn btn-secondary update-order-status-btn" data-id="' + order.id + '" data-status="shipped">发货</button>' +
                 '</td>' +
                 '</tr>'
             ).join('');
+            
+            // 为订单详情和更新状态按钮添加事件监听器
+            document.querySelectorAll('.view-order-detail-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    viewOrderDetail(this.getAttribute('data-id'));
+                });
+            });
+            
+            document.querySelectorAll('.update-order-status-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    updateOrderStatus(this.getAttribute('data-id'), this.getAttribute('data-status'));
+                });
+            });
         }
         
         function viewOrderDetail(orderId) {
@@ -2189,6 +2173,104 @@ const dashboardTemplate = `<!DOCTYPE html>
                 alert('更新订单状态过程中发生错误');
             });
         }
+        
+        // 页面加载完成后显示概览并添加事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            showContent('overview');
+            
+            // 为菜单项添加事件监听器
+            const menuItems = document.querySelectorAll('.menu li');
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const contentId = this.getAttribute('data-content');
+                    if (contentId) {
+                        showContent(contentId);
+                    }
+                });
+            });
+            
+            // 为登出按钮添加事件监听器
+            const logoutBtn = document.querySelector('.logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    logout();
+                });
+            }
+            
+            // 为添加商品按钮添加事件监听器
+            const addProductBtn = document.getElementById('add-product-btn');
+            if (addProductBtn) {
+                addProductBtn.addEventListener('click', showProductForm);
+            }
+            
+            // 为取消按钮添加事件监听器
+            const cancelProductBtn = document.getElementById('cancel-product-btn');
+            if (cancelProductBtn) {
+                cancelProductBtn.addEventListener('click', hideProductForm);
+            }
+            
+            // 为关闭订单详情按钮添加事件监听器
+            const closeOrderDetailBtn = document.getElementById('close-order-detail-btn');
+            if (closeOrderDetailBtn) {
+                closeOrderDetailBtn.addEventListener('click', hideOrderDetail);
+            }
+            
+            // 为刷新订单按钮添加事件监听器
+            const refreshOrdersBtn = document.getElementById('refresh-orders-btn');
+            if (refreshOrdersBtn) {
+                refreshOrdersBtn.addEventListener('click', loadOrders);
+            }
+            
+            // 处理商品表单提交
+            const productForm = document.getElementById('product-form');
+            if (productForm) {
+                productForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const productId = document.getElementById('product-id').value;
+                    const name = document.getElementById('product-name').value;
+                    const price = document.getElementById('product-price').value;
+                    const stock = document.getElementById('product-stock').value;
+                    const category = document.getElementById('product-category').value;
+                    const description = document.getElementById('product-description').value;
+                    const image = document.getElementById('product-image').value;
+                    
+                    const method = productId ? 'PUT' : 'POST';
+                    const url = productId ? '/api/products/' + productId : '/api/products';
+                    
+                    fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name,
+                            price: parseFloat(price),
+                            stock_quantity: parseInt(stock),
+                            category,
+                            description,
+                            image_url: image
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            alert(productId ? '商品更新成功' : '商品添加成功');
+                            hideProductForm();
+                            loadProducts(); // 重新加载商品列表
+                        } else {
+                            alert('操作失败: ' + (result.error || '未知错误'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Product form error:', error);
+                        alert('操作过程中发生错误');
+                    });
+                });
+            }
+        });
         
         // 将函数绑定到window对象以确保全局可访问
         window.showContent = showContent;
