@@ -24,20 +24,21 @@ export async function registerUser(request, env) {
       });
     }
     
-    // Hash password (in a real app, use a proper hashing library)
-    const hashedPassword = btoa(password);
+    // Simple encoding for password (in a real app, use a proper hashing library)
+    const encodedPassword = encodeURIComponent(password);
     
     // Insert new user
     await env.D1_DB.prepare(
       'INSERT INTO users (username, email, password) VALUES (?, ?, ?)'
     )
-      .bind(username, email, hashedPassword)
+      .bind(username, email, encodedPassword)
       .run();
     
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
+    console.error('Registration error:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -57,14 +58,14 @@ export async function loginUser(request, env) {
       });
     }
     
-    // Hash password for comparison
-    const hashedPassword = btoa(password);
+    // Encode password for comparison
+    const encodedPassword = encodeURIComponent(password);
     
     // Find user
     const user = await env.D1_DB.prepare(
       'SELECT id, username FROM users WHERE email = ? AND password = ?'
     )
-      .bind(email, hashedPassword)
+      .bind(email, encodedPassword)
       .first();
       
     if (!user) {
@@ -82,6 +83,7 @@ export async function loginUser(request, env) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
+    console.error('Login error:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

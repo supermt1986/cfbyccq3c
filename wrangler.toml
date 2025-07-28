@@ -8,4 +8,4 @@ port = 8788
 [[ d1_databases ]]
 binding = "D1_DB"
 database_name = "shop_db"
-database_id = "your_database_id"
+database_id = "bef7ed19-e20a-4531-972b-3a4506f85b6c"
