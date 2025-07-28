@@ -1901,6 +1901,28 @@ const dashboardTemplate = `<!DOCTYPE html>
         // 页面加载完成后显示概览
         document.addEventListener('DOMContentLoaded', function() {
             showContent('overview');
+            
+            // 为菜单项添加事件监听器
+            const menuLinks = document.querySelectorAll('.menu a');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const onclickAttr = this.getAttribute('onclick');
+                    if (onclickAttr) {
+                        // 使用eval执行onclick属性中的函数调用
+                        eval(onclickAttr);
+                    }
+                });
+            });
+            
+            // 为登出按钮添加事件监听器
+            const logoutBtn = document.querySelector('.logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    logout();
+                });
+            }
         });
         
         // 将函数绑定到window对象以确保全局可访问
