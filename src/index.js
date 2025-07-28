@@ -1838,9 +1838,10 @@ const dashboardTemplate = `<!DOCTYPE html>
         // 显示选中的内容
         function showContent(contentId) {
             // 隐藏所有内容
-            document.querySelectorAll('.content').forEach(content => {
-                content.classList.remove('active');
-            });
+            const contents = document.querySelectorAll('.content');
+            for (let i = 0; i < contents.length; i++) {
+                contents[i].classList.remove('active');
+            }
             
             // 显示选中的内容
             const contentElement = document.getElementById(contentId);
@@ -1849,9 +1850,10 @@ const dashboardTemplate = `<!DOCTYPE html>
             }
             
             // 更新菜单状态
-            document.querySelectorAll('.menu li').forEach(li => {
-                li.classList.remove('active');
-            });
+            const menuItems = document.querySelectorAll('.menu li');
+            for (let i = 0; i < menuItems.length; i++) {
+                menuItems[i].classList.remove('active');
+            }
             
             // 找到对应的菜单项并激活
             const menuLinks = document.querySelectorAll('.menu a');
